@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# NPM cache
+.npm-cache/
+**/.npm-cache/
+
+# Environment variables
+.env
+
+# macOS
+.DS_Store
+
+# Build files
+dist/
+build/
+
+# Logs
+*.log
