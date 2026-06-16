@@ -1,28 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { authApi, googleLoginUrl } from './lib/api';
+import { authApi } from './lib/api';
 import { saveAccessToken } from './lib/auth';
+
+const GOOGLE_DEMO_PROFILE = {
+  name: 'MailGen Demo User',
+  email: 'demo.google@mailgen.local',
+  sub: 'mailgen-google-demo-user',
+};
 
 type LocationState = {
   email?: string;
   message?: string;
 };
 
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  google_not_configured:
-    'Google sign-in is not configured yet. Add Google OAuth credentials to enable it.',
-  google_failed: 'Google sign-in could not be completed. Please try again.',
-};
-
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
-}
-
-function readInitialOAuthError(): string | null {
-  const params = new URLSearchParams(window.location.search);
-  const oauthError = params.get('error');
-  if (!oauthError) return null;
-  return OAUTH_ERROR_MESSAGES[oauthError] || 'Sign-in failed. Please try again.';
 }
 
 export default function Login() {
@@ -33,17 +26,8 @@ export default function Login() {
   const [email, setEmail] = useState(locationState.email || '');
   const [password, setPassword] = useState('');
   const [loadingAction, setLoadingAction] = useState<'password' | 'google' | null>(null);
-  const [error, setError] = useState<string | null>(readInitialOAuthError);
+  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(locationState.message || null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (token) {
-      saveAccessToken(token);
-      navigate('/dashboard', { replace: true });
-    }
-  }, [navigate]);
 
   const handlePasswordLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -62,9 +46,20 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setSuccess(null);
     setLoadingAction('google');
-    window.location.href = googleLoginUrl;
+
+    try {
+      const response = await authApi.googleDemo(GOOGLE_DEMO_PROFILE);
+      saveAccessToken(response.access_token);
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const isLoading = loadingAction !== null;
@@ -141,7 +136,7 @@ export default function Login() {
           disabled={isLoading}
         >
           <span className="google-mark" aria-hidden="true">G</span>
-          {loadingAction === 'google' ? 'Redirecting to Google...' : 'Continue with Google'}
+          {loadingAction === 'google' ? 'Signing in...' : 'Continue with Google'}
         </button>
 
         <p className="auth-switch-text">

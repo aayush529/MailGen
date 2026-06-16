@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi, googleLoginUrl } from './lib/api';
+import { authApi } from './lib/api';
 import { saveAccessToken } from './lib/auth';
+
+const GOOGLE_DEMO_PROFILE = {
+  name: 'MailGen Demo User',
+  email: 'demo.google@mailgen.local',
+  sub: 'mailgen-google-demo-user',
+};
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -39,9 +45,20 @@ export default function Signup() {
     }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
+    setError(null);
+    setSuccess(null);
     setLoadingAction('google');
-    window.location.href = googleLoginUrl;
+
+    try {
+      const response = await authApi.googleDemo(GOOGLE_DEMO_PROFILE);
+      saveAccessToken(response.access_token);
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const isLoading = loadingAction !== null;
@@ -134,7 +151,7 @@ export default function Signup() {
           disabled={isLoading}
         >
           <span className="google-mark" aria-hidden="true">G</span>
-          {loadingAction === 'google' ? 'Redirecting to Google...' : 'Continue with Google'}
+          {loadingAction === 'google' ? 'Signing in...' : 'Continue with Google'}
         </button>
 
         <p className="auth-switch-text">
