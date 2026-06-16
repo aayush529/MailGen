@@ -20,9 +20,30 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS
+  // Enable CORS — allow the configured frontend plus common local origins
+  // (localhost and 127.0.0.1 on any port) so forwarded-port dev setups work.
+  const allowedOrigins = new Set(
+    [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(
+      Boolean,
+    ) as string[],
+  );
+
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (
+        !origin ||
+        allowedOrigins.has(origin) ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
     credentials: true,
   });
 
