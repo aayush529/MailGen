@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GenerateMailDto } from './dto/generate-mail.dto';
+import { buildBodySectionPrompt } from './mail-type.config';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MASTER SYSTEM PROMPT
@@ -77,6 +78,22 @@ Your task is to generate professional, context-aware emails based on the selecte
 - Closing: Express enthusiasm for the opportunity.
 - Tone: Professional and positive.
 
+### TYPE: Resignation
+- Purpose: Formally resign from a job or position.
+- Subject format: Resignation – [Role] – [Last Working Date if available]
+- Greeting: Dear [Recipient],
+- Body must cover: clear statement of resignation, current role, last working day, notice period if applicable, brief reason if provided, offer to assist with handover.
+- Closing: Express gratitude for the opportunity and professionalism throughout.
+- Tone: Professional, respectful, and concise.
+
+### TYPE: Scholarship Application
+- Purpose: Apply for a scholarship or financial aid.
+- Subject format: Application for [Scholarship Name]
+- Greeting: Dear Scholarship Committee, (or recipient if provided)
+- Body must cover: introduction, academic background, achievements, motivation for applying, why the applicant deserves or needs the scholarship.
+- Closing: Express gratitude and eagerness for consideration.
+- Tone: Professional, sincere, and persuasive.
+
 ---
 
 ## WORD COUNT CONSTRAINT
@@ -115,73 +132,20 @@ function buildStructuredPrompt(dto: GenerateMailDto, userName: string): string {
   const { type, tone } = dto;
   const wordLimitNum = dto.word_limit ? parseInt(dto.word_limit, 10) : 200;
   const wordLimit = `${wordLimitNum} words`;
+  const recipient = dto.recipient || 'Concerned Authority';
 
   const base = `Email Type: ${type}
 Tone: ${tone}
 Word Limit for Email Body: ${wordLimit}
 Sender Name: ${userName}`;
 
-  const instructionSuffix = `\n\nGenerate the email body using the details above.
+  const bodySections = buildBodySectionPrompt(type, dto, userName, recipient);
+
+  return `${base}
+
+${bodySections}
+
 The email body MUST be very close to the target of ${wordLimit} (do not write significantly fewer words; if the target is 500, write a detailed and elaborated email of approximately 500 words by adding context and details; if the target is 100, keep it extremely concise). DO NOT exceed ${wordLimitNum} words.`;
-
-  switch (type) {
-    case 'Leave Request':
-      return `${base}
-Recipient: ${dto.recipient || 'Concerned Authority'}
-Sender Role: ${dto.sender_role || 'Student/Employee'}
-Reason for Leave: ${dto.reason || dto.description || 'Not specified'}
-Duration: ${dto.duration || 'Not specified'}
-Leave Dates: ${dto.leave_date || 'Not specified'}
-Additional Context: ${dto.additional_context || 'None'}${instructionSuffix}`;
-
-    case 'Internship Application':
-      return `${base}
-Recipient: ${dto.recipient || 'Hiring Manager'}
-Company/Organisation: ${dto.company_name || 'Not specified'}
-Role Applied For: ${dto.role_applied || 'Internship Position'}
-Academic Background: ${dto.academic_background || dto.description || 'Not specified'}
-Skills & Technologies: ${dto.skills || 'Not specified'}
-Why this Internship: ${dto.why_this_internship || 'Not specified'}
-Additional Context: ${dto.additional_context || 'None'}${instructionSuffix}`;
-
-    case 'Complaint Letter':
-      return `${base}
-Recipient: ${dto.recipient || 'Concerned Department'}
-Sender Role: ${dto.sender_role || 'Customer/Student/Employee'}
-Issue: ${dto.issue || dto.description || 'Not specified'}
-Date of Incident: ${dto.incident_date || 'Not specified'}
-Previous Resolution Attempts: ${dto.previous_action || 'None'}
-Additional Context: ${dto.additional_context || 'None'}${instructionSuffix}`;
-
-    case 'Apology Mail':
-      return `${base}
-Recipient: ${dto.recipient || 'Concerned Party'}
-Sender Role: ${dto.sender_role || 'Professional/Student'}
-Apologising For: ${dto.apology_for || dto.description || 'Not specified'}
-Corrective Action Being Taken: ${dto.corrective_action || 'Not specified'}
-Additional Context: ${dto.additional_context || 'None'}${instructionSuffix}`;
-
-    case 'Follow-up Mail':
-      return `${base}
-Recipient: ${dto.recipient || 'Recipient'}
-Previous Communication Topic: ${dto.previous_communication || dto.description || 'Not specified'}
-What Update/Response is Needed: ${dto.follow_up_ask || 'Not specified'}
-Additional Context: ${dto.additional_context || 'None'}${instructionSuffix}`;
-
-    case 'Offer Acceptance':
-      return `${base}
-Recipient: ${dto.recipient || 'HR/Recruiter'}
-Role/Programme Being Accepted: ${dto.offer_role || dto.description || 'Not specified'}
-Confirmed Joining Date: ${dto.joining_date || 'Not specified'}
-Additional Context: ${dto.additional_context || 'None'}${instructionSuffix}`;
-
-    default:
-      return `${base}
-Description: ${dto.description || 'No description provided'}
-Additional Context: ${dto.additional_context || 'None'}
-
-Generate a professional email using the details above. Strictly keep the body within ${wordLimit}.`;
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -412,6 +376,26 @@ export class MailService {
       if (targetLimit >= 500) {
         text += '\n\nI would also like to thank the hiring team for making the recruitment process so smooth and engaging. I look forward to meeting everyone in person on my first day. Thank you again for this fantastic opportunity.';
       }
+    } else if (type === 'Resignation') {
+      if (targetLimit >= 200) {
+        text += '\n\nDuring my notice period, I am committed to completing all pending assignments and ensuring a smooth handover of responsibilities to my team or designated successor.';
+      }
+      if (targetLimit >= 350) {
+        text += '\n\nI have documented my ongoing projects and key contacts to facilitate the transition. I am happy to train a replacement or assist in any way needed during this period.';
+      }
+      if (targetLimit >= 500) {
+        text += '\n\nI am grateful for the opportunities for professional growth and the valuable experience I have gained during my tenure. I wish the organisation continued success and hope to stay in touch with colleagues in the future.';
+      }
+    } else if (type === 'Scholarship Application') {
+      if (targetLimit >= 200) {
+        text += '\n\nMy academic record and extracurricular involvement reflect my dedication to excellence and my commitment to making a meaningful contribution to my field of study.';
+      }
+      if (targetLimit >= 350) {
+        text += '\n\nReceiving this scholarship would significantly reduce my financial burden and allow me to focus fully on my studies and research. I am determined to uphold the values and expectations associated with this award.';
+      }
+      if (targetLimit >= 500) {
+        text += '\n\nI am eager to represent your institution with integrity and to give back to the community through mentorship and service once I complete my programme. Thank you for considering my application.';
+      }
     } else {
       if (targetLimit >= 200) {
         text += '\n\nPlease let me know if you need any further details or clarifications. I will be happy to elaborate on any specific points of interest.';
@@ -489,6 +473,24 @@ export class MailService {
         'Thank you once again for the offer and for the warm welcome during the recruitment process.',
         'I am excited to align my career goals with the company\'s vision.',
         'I look forward to working under your leadership and contributing to team achievements.',
+      ],
+      'Resignation': [
+        'I will ensure all my current projects are documented and handed over before my departure.',
+        'I am happy to assist with training my replacement or supporting the team during the transition.',
+        'Thank you for the opportunities for growth and development during my time here.',
+        'I wish the team and the organisation continued success in all future endeavours.',
+        'Please let me know if there are any formal exit procedures I should complete.',
+        'I remain committed to maintaining high standards of work until my last day.',
+        'I appreciate your understanding and support during this transition period.',
+      ],
+      'Scholarship Application': [
+        'My academic performance demonstrates consistent dedication and a strong work ethic.',
+        'I am actively involved in community service and leadership roles on campus.',
+        'This scholarship would enable me to pursue research and professional development opportunities.',
+        'I am committed to maintaining the academic standards required of scholarship recipients.',
+        'Thank you for your time and consideration of my application.',
+        'I am happy to provide references or additional documentation upon request.',
+        'I look forward to contributing positively to the academic community if selected.',
       ],
     };
 
@@ -596,6 +598,30 @@ export class MailService {
         subject = `Acceptance of Offer – ${role}`;
         const intro = `${salutation}\n\nThank you for extending the offer for ${role}. I am pleased to formally accept this opportunity.\n\n${dto.joining_date ? `I confirm my joining date as ${dto.joining_date}.` : 'Please let me know the next steps regarding onboarding.'}${elaboration}`;
         const closing = `\n\nI look forward to contributing to the team.\n\n${signOff},\n${userName}`;
+        const currentCount = intro.split(/\s+/).filter(Boolean).length + closing.split(/\s+/).filter(Boolean).length;
+        const padding = this.getMockPaddingSentences(type, currentCount, targetLimit);
+        body = intro + padding + closing;
+        break;
+      }
+
+      case 'Resignation': {
+        const employer = dto.employer_name ? ` at ${dto.employer_name}` : '';
+        const role = dto.current_role || 'my current position';
+        subject = `${urgencyPrefix}Resignation – ${role}`;
+        const intro = `${salutation}\n\nPlease accept this letter as formal notification of my resignation from the position of ${role}${employer}.${dto.last_working_date ? ` My last working day will be ${dto.last_working_date}.` : ''}${dto.notice_period ? ` I am providing ${dto.notice_period} of notice as required.` : ''}\n\n${dto.reason_for_leaving ? `After careful consideration, I have decided to leave because ${dto.reason_for_leaving}.` : 'This was not an easy decision, and I am grateful for the opportunities I have had here.'}${elaboration}`;
+        const closing = `\n\nThank you for your support and guidance during my tenure.\n\n${signOff},\n${userName}`;
+        const currentCount = intro.split(/\s+/).filter(Boolean).length + closing.split(/\s+/).filter(Boolean).length;
+        const padding = this.getMockPaddingSentences(type, currentCount, targetLimit);
+        body = intro + padding + closing;
+        break;
+      }
+
+      case 'Scholarship Application': {
+        const scholarship = dto.scholarship_name || 'Scholarship Programme';
+        const institution = dto.institution ? ` at ${dto.institution}` : '';
+        subject = `Application for ${scholarship}`;
+        const intro = `${salutation}\n\nI am writing to apply for the ${scholarship}${institution}. ${dto.academic_background || dto.description || ''}\n\n${dto.achievements ? `My notable achievements include ${dto.achievements}.` : ''} ${dto.why_scholarship ? `I am applying because ${dto.why_scholarship}.` : ''}${elaboration}`;
+        const closing = `\n\nThank you for considering my application. I would be honoured to receive this scholarship.\n\n${signOff},\n${userName}`;
         const currentCount = intro.split(/\s+/).filter(Boolean).length + closing.split(/\s+/).filter(Boolean).length;
         const padding = this.getMockPaddingSentences(type, currentCount, targetLimit);
         body = intro + padding + closing;

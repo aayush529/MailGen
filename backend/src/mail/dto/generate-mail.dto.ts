@@ -104,4 +104,42 @@ export class GenerateMailDto {
   @IsOptional()
   @IsString()
   joining_date?: string; // Confirmed joining date if known
+
+  // ── Resignation ──────────────────────────────────────────────────────────
+  @IsOptional()
+  @IsString()
+  employer_name?: string;
+
+  @IsOptional()
+  @IsString()
+  current_role?: string;
+
+  @IsOptional()
+  @IsString()
+  last_working_date?: string;
+
+  @IsOptional()
+  @IsString()
+  reason_for_leaving?: string;
+
+  @IsOptional()
+  @IsString()
+  notice_period?: string;
+
+  // ── Scholarship Application ──────────────────────────────────────────────
+  @IsOptional()
+  @IsString()
+  scholarship_name?: string;
+
+  @IsOptional()
+  @IsString()
+  institution?: string;
+
+  @IsOptional()
+  @IsString()
+  achievements?: string;
+
+  @IsOptional()
+  @IsString()
+  why_scholarship?: string;
 }
