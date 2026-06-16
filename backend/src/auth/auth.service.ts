@@ -46,25 +46,37 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: user.id, email: user.email, name: user.name };
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.signToken(user),
     };
   }
 
-  async googleMockLogin(payload: { name: string; email: string; sub: string }) {
-    let user = await this.usersService.findOneByEmail(payload.email);
+  signToken(user: { id: string; email: string; name: string }): string {
+    const payload = { sub: user.id, email: user.email, name: user.name };
+    return this.jwtService.sign(payload);
+  }
+
+  async validateOAuthUser(profile: { name: string; email: string }) {
+    let user = await this.usersService.findOneByEmail(profile.email);
     if (!user) {
       user = await this.usersService.create({
-        name: payload.name,
-        email: payload.email,
-        password: 'google-oauth-mocked-password',
+        name: profile.name,
+        email: profile.email,
+        password: 'oauth-account-no-password',
       });
     }
 
-    const jwtPayload = { sub: user.id, email: user.email, name: user.name };
+    return { id: user.id, email: user.email, name: user.name };
+  }
+
+  async googleMockLogin(payload: { name: string; email: string; sub: string }) {
+    const user = await this.validateOAuthUser({
+      name: payload.name,
+      email: payload.email,
+    });
+
     return {
-      access_token: this.jwtService.sign(jwtPayload),
+      access_token: this.signToken(user),
     };
   }
 }

@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from './lib/api';
+import { authApi, googleLoginUrl } from './lib/api';
 import { saveAccessToken } from './lib/auth';
-
-const GOOGLE_DEMO_PROFILE = {
-  name: 'MailGen Demo User',
-  email: 'demo.google@mailgen.local',
-  sub: 'mailgen-google-demo-user',
-};
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -45,21 +39,9 @@ export default function Signup() {
     }
   };
 
-  const handleGoogleDemoSignup = async () => {
-    setError(null);
-    setSuccess(null);
+  const handleGoogleSignup = () => {
     setLoadingAction('google');
-
-    try {
-      const response = await authApi.googleDemo(GOOGLE_DEMO_PROFILE);
-      saveAccessToken(response.access_token);
-      setSuccess('Signed in with the Google demo account.');
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoadingAction(null);
-    }
+    window.location.href = googleLoginUrl;
   };
 
   const isLoading = loadingAction !== null;
@@ -148,15 +130,12 @@ export default function Signup() {
         <button
           type="button"
           className="auth-google-btn"
-          onClick={handleGoogleDemoSignup}
+          onClick={handleGoogleSignup}
           disabled={isLoading}
         >
           <span className="google-mark" aria-hidden="true">G</span>
-          {loadingAction === 'google' ? 'Connecting...' : 'Continue with Google demo'}
+          {loadingAction === 'google' ? 'Redirecting to Google...' : 'Continue with Google'}
         </button>
-        <p className="auth-helper-text">
-          This local demo creates or reuses one test Google profile through the backend.
-        </p>
 
         <p className="auth-switch-text">
           Already have an account? <Link to="/login">Log in</Link>
