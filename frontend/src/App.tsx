@@ -4,11 +4,11 @@ import LandingPage from './LandingPage';
 import Login from './Login';
 import Signup from './Signup';
 import Dashboard from './Dashboard';
+import { hasValidSession } from './lib/auth';
 
 // Guard for routes that require an authenticated session
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem('access_token');
-  if (!token) {
+  if (!hasValidSession()) {
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
@@ -16,8 +16,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Guard for routes that should not be visible when logged in (like Login or Signup)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
+  if (hasValidSession()) {
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
